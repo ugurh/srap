@@ -1,3 +1,9 @@
+server:
+  port: 8080
+  error:
+    whitelabel:
+      enabled: false
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/demo
@@ -15,3 +21,12 @@ spring:
             non_contextual_creation: true
   application:
     name: demo
+  redis:
+    host: 127.0.0.1
+    port: 6380
+    database: 0
+    password: redis
+    timeout: 60000
+    defaultTTL: 3000
+    caches-ttl:
+      employee: 86400

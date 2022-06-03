@@ -4,6 +4,9 @@ import com.example.demo.model.Employee;
 import com.example.demo.service.EmployeeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +36,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
+    @Cacheable(cacheNames = "employee", key = "'employee#' + #id", cacheManager = "redisCacheManager")
     public ResponseEntity<Employee> get(@PathVariable Long id) {
         log.info("Request to get employee: {}", id);
         Employee employee = employeeService.get(id).orElse(null);
@@ -49,13 +53,15 @@ public class EmployeeController {
     }
 
     @PutMapping("/update")
+    @CachePut(cacheNames = "employee", key = "'employee#' + #employee.id", cacheManager = "redisCacheManager")
     public ResponseEntity<?> update(@Valid @RequestBody Employee employee) {
         log.info("Request to update employee: {}", employee);
-        Employee result = employeeService.create(employee);
+        Employee result = employeeService.update(employee);
         return ResponseEntity.ok().body(result);
     }
 
     @DeleteMapping("/{id}")
+    @CacheEvict(cacheNames = "employee", key = "'employee#' + #id", cacheManager = "redisCacheManager")
     public ResponseEntity<?> deleteGroup(@PathVariable Long id) {
         log.info("Request to delete employee: {}", id);
         employeeService.deleteById(id);

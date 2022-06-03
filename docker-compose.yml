@@ -13,6 +13,15 @@ services:
       - '5432:5432'
     networks:
       - demo_net
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - '6380:6379'
+    environment:
+      REDIS_PASSWORD: redis
+    networks:
+      - demo_net
 
 networks:
   demo_net:
