@@ -4,6 +4,8 @@ import com.example.demo.shared.RedisProperties;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.SocketOptions;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.cache.annotation.EnableCaching;
@@ -14,6 +16,7 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -31,6 +34,8 @@ import java.util.Objects;
 @AutoConfigureAfter(RedisAutoConfiguration.class)
 @EnableCaching
 public class RedisConfiguration {
+    private static final int CONNECT_TIMEOUT = 1000;
+    private static final int COMMAND_TIMEOUT = 60000;
     private final RedisProperties redisProperties;
 
     public RedisConfiguration(RedisProperties redisProperties) {
@@ -82,7 +87,23 @@ public class RedisConfiguration {
         RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration(redisProperties.getHost(), redisProperties.getPort());
         redisStandaloneConfiguration.setDatabase(redisProperties.getDatabase());
         redisStandaloneConfiguration.setPassword(RedisPassword.of(redisProperties.getPassword()));
-        return new LettuceConnectionFactory(redisStandaloneConfiguration);
+
+        final SocketOptions socketOptions = SocketOptions.builder()
+                .connectTimeout(Duration.ofMillis(CONNECT_TIMEOUT)).build();
+
+        final ClientOptions clientOptions = ClientOptions.builder()
+                .socketOptions(socketOptions)
+                .build();
+
+        final LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofMillis(COMMAND_TIMEOUT))
+                .clientOptions(clientOptions)
+                .build();
+
+        final LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(redisStandaloneConfiguration, clientConfig);
+        connectionFactory.setValidateConnection(true);
+
+        return connectionFactory;
     }
 
     private RedisCacheConfiguration createCacheConfiguration(RedisCacheConfiguration redisCacheConfiguration, long timeoutInSeconds) {
