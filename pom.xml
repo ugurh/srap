@@ -14,7 +14,7 @@
     <name>demo</name>
     <description>demo</description>
     <properties>
-        <java.version>17</java.version>
+        <java.version>11</java.version>
         <redis-data.version>2.6.7</redis-data.version>
         <redis.clients.version>4.2.3</redis.clients.version>
         <commons.lang3.version>3.12.0</commons.lang3.version>
