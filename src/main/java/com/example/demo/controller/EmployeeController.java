@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.dtos.EmployeeDto;
+import com.example.demo.mappers.EmployeeMapper;
 import com.example.demo.model.Employee;
 import com.example.demo.service.EmployeeService;
 import org.slf4j.Logger;
@@ -23,48 +25,51 @@ public class EmployeeController {
     private final Logger log = LoggerFactory.getLogger(EmployeeController.class);
 
     private final EmployeeService employeeService;
+    private final EmployeeMapper employeeMapper;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(EmployeeService employeeService, EmployeeMapper employeeMapper) {
         this.employeeService = employeeService;
+        this.employeeMapper = employeeMapper;
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<Employee>> getAllGroups() {
+    public ResponseEntity<List<EmployeeDto>> getAllGroups() {
         log.info("Request to get employees");
-        List<Employee> groups = employeeService.getAll();
-        return new ResponseEntity<>(groups, HttpStatus.OK);
+        List<Employee> employees = employeeService.getAll();
+
+        return new ResponseEntity<>(employeeMapper.convertToDto(employees), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     @Cacheable(cacheNames = "employee", key = "'employee#' + #id", cacheManager = "redisCacheManager")
-    public ResponseEntity<Employee> get(@PathVariable Long id) {
+    public ResponseEntity<EmployeeDto> get(@PathVariable Long id) {
         log.info("Request to get employee: {}", id);
         Employee employee = employeeService.get(id).orElse(null);
 
-        return new ResponseEntity<>(employee, HttpStatus.OK);
+        return new ResponseEntity<>(employeeMapper.convertToDto(employee), HttpStatus.OK);
     }
 
     @PostMapping("/create")
-    public ResponseEntity<?> create(@Valid @RequestBody Employee employee) throws URISyntaxException {
-        log.info("Request to create employee: {}", employee);
-        Employee result = employeeService.create(employee);
-        return ResponseEntity.created(new URI("/api/employee/" + result.getId()))
-                .body(result);
+    public ResponseEntity<EmployeeDto> create(@Valid @RequestBody EmployeeDto employeeDto) throws URISyntaxException {
+        log.info("Request to create employee: {}", employeeDto);
+        Employee employee = employeeService.create(employeeMapper.convertToEntity(employeeDto));
+        return ResponseEntity.created(new URI("/api/employee/" + employee.getId()))
+                .body(employeeMapper.convertToDto(employee));
     }
 
-    @PutMapping("/update")
-    @CachePut(cacheNames = "employee", key = "'employee#' + #employee.id", cacheManager = "redisCacheManager")
-    public ResponseEntity<?> update(@Valid @RequestBody Employee employee) {
-        log.info("Request to update employee: {}", employee);
-        Employee result = employeeService.update(employee);
-        return ResponseEntity.ok().body(result);
+    @PutMapping("/update/{id}")
+    @CachePut(cacheNames = "employee", key = "'employee#' + #id", cacheManager = "redisCacheManager")
+    public ResponseEntity<EmployeeDto> update(@PathVariable Long id, @Valid @RequestBody EmployeeDto employeeDto) {
+        log.info("Request to update employee: {}", employeeDto);
+        Employee employee = employeeService.update(employeeMapper.convertToEntity(employeeDto));
+        return ResponseEntity.ok().body(employeeMapper.convertToDto(employee));
     }
 
     @DeleteMapping("/{id}")
     @CacheEvict(cacheNames = "employee", key = "'employee#' + #id", cacheManager = "redisCacheManager")
-    public ResponseEntity<?> deleteGroup(@PathVariable Long id) {
+    public ResponseEntity<String> deleteGroup(@PathVariable Long id) {
         log.info("Request to delete employee: {}", id);
         employeeService.deleteById(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body("Employee deleted.");
     }
 }
